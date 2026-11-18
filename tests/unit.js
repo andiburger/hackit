@@ -1,6 +1,13 @@
-/* HACKIT – Unit- & UI-Test-Suite (ausführbar mit JavaScriptCore: jsc tests/unit.js) */
+/* HACKIT – Unit- & UI-Test-Suite (ausführbar mit JavaScriptCore `jsc` oder Node.js `node`) */
 (() => {
-  const ROOT = '/Users/andreas/Documents/GitHub/hackit/';
+  const isNode = typeof process !== 'undefined' && process.versions && process.versions.node;
+  const ROOT = isNode
+    ? require('path').resolve(__dirname, '..') + '/'
+    : '/Users/andreas/Documents/GitHub/hackit/';
+  const runScript = isNode
+    ? (p) => require('vm').runInThisContext(require('fs').readFileSync(p, 'utf8'), { filename: p })
+    : (p) => load(p);
+  const log = isNode ? (...a) => console.log(...a) : (...a) => print(...a);
 
   /* ---------------- Mini-Test-Framework ---------------- */
   let passed = 0, failed = 0, currentSuite = '';
@@ -286,7 +293,7 @@
 
   /* ---------------- Module laden ---------------- */
   for (const f of ['js/i18n.js', 'js/vfs.js', 'js/terminal.js', 'js/commands.js', 'js/commands-extra.js', 'js/levels.js', 'js/levels-advanced.js', 'js/levels-index.js']) {
-    load(ROOT + f);
+    runScript(ROOT + f);
   }
 
   /* ======================================================================
@@ -676,7 +683,7 @@
    * 6. UI & Game-Loop Tests (js/game.js)
    * ====================================================================== */
   suite('UI & Game (game.js)', () => {
-    load(ROOT + 'js/game.js');
+    runScript(ROOT + 'js/game.js');
 
     const flush = () => new Promise(r => Promise.resolve().then(() => Promise.resolve().then(r)));
 
@@ -791,9 +798,10 @@
   /* ---------------- Ergebnis ausgeben ---------------- */
   (async () => {
     for (const runTest of asyncQueue) await runTest();
-    print(`HACKIT Test Suite: ${passed} passed, ${failed} failed`);
+    log(`HACKIT Test Suite: ${passed} passed, ${failed} failed`);
     if (failures.length) {
-      failures.forEach(f => print(`  FAIL: ${f.label}\n    ${f.e.message}\n    ${f.e.stack || ''}`));
+      failures.forEach(f => log(`  FAIL: ${f.label}\n    ${f.e.message}\n    ${f.e.stack || ''}`));
+      if (isNode) process.exit(1);
     }
   })();
 })();
