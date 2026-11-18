@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HACKIT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@600;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="matrix"></canvas>
+  <div class="scanlines"></div>
+
+  <!-- ========== START ========== -->
+  <section id="screen-start" class="screen active">
+    <div class="lang-switch lang-corner"></div>
+    <div class="start-box">
+      <h1 class="logo glitch" data-text="HACKIT">HACKIT</h1>
+      <p class="tagline" data-i18n="tagline"></p>
+      <div class="boot" id="boot"></div>
+      <div class="start-form hidden" id="start-form">
+        <label for="alias" data-i18n="aliasLabel"></label>
+        <input id="alias" maxlength="16" data-i18n-ph="aliasPh" autocomplete="off" spellcheck="false" />
+        <button id="btn-start" class="btn btn-primary"></button>
+        <p class="disclaimer" data-i18n="disclaimer"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== MISSIONS ========== -->
+  <section id="screen-map" class="screen">
+    <header class="topbar">
+      <div class="brand">HACK<span>IT</span></div>
+      <div class="player">
+        <div class="player-alias" id="p-alias">anon</div>
+        <div class="player-rank" id="p-rank"></div>
+      </div>
+      <div class="player-stats">
+        <div class="stat"><span id="p-points">0</span><small data-i18n="points"></small></div>
+        <div class="stat"><span id="p-done">0/0</span><small data-i18n="missions"></small></div>
+        <div class="stat"><span id="p-stars">0</span><small data-i18n="stars"></small></div>
+      </div>
+      <div class="lang-switch"></div>
+      <button class="btn btn-ghost btn-small" id="btn-reset" data-i18n="reset"></button>
+    </header>
+    <div class="progress-wrap"><div class="progress" id="p-progress"></div></div>
+    <main class="map" id="map">
+    </main>
+  </section>
+
+  <!-- ========== GAME ========== -->
+  <section id="screen-game" class="screen">
+    <header class="topbar">
+      <button class="btn btn-ghost btn-small" id="btn-back" data-i18n="back"></button>
+      <div class="mission-title"><span id="g-num">01</span> <span id="g-title"></span></div>
+      <span class="save-indicator" id="save-indicator" data-i18n="saved"></span>
+      <button class="btn btn-ghost btn-small" id="btn-restart" data-i18n="restart"></button>
+      <div class="lang-switch"></div>
+      <div class="player-stats">
+        <div class="stat"><span id="g-points">100</span><small data-i18n="possible"></small></div>
+      </div>
+    </header>
+    <div class="game">
+      <aside class="briefing">
+        <div class="panel">
+          <h3 data-i18n="briefing"></h3>
+          <div id="g-story" class="story"></div>
+        </div>
+        <div class="panel">
+          <h3 data-i18n="objectives"></h3>
+          <ul id="g-objectives" class="objectives"></ul>
+        </div>
+        <div class="panel" id="g-newcmds-panel">
+          <h3 data-i18n="tools"></h3>
+          <div id="g-newcmds" class="cmds"></div>
+        </div>
+        <div class="panel hints-panel" id="hints-panel">
+          <h3><span data-i18n="hints"></span> <small id="g-hintcount"></small></h3>
+          <div id="g-hints"></div>
+          <button class="btn btn-hint" id="btn-hint"></button>
+        </div>
+        <div class="panel">
+          <h3 data-i18n="submitFlag"></h3>
+          <form id="flag-form" class="flag-form">
+            <input id="flag-input" placeholder="HACKIT{...}" autocomplete="off" spellcheck="false" />
+            <button class="btn btn-primary btn-small" data-i18n="send"></button>
+          </form>
+        </div>
+      </aside>
+      <div class="term-window">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="term-title" id="term-title">terminal</span>
+        </div>
+        <div class="terminal" id="terminal">
+          <div id="term-out"></div>
+          <div class="term-line" id="term-line">
+            <span id="term-prompt" class="prompt"></span>
+            <input id="term-input" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== MODAL ========== -->
+  <div class="modal hidden" id="modal">
+    <div class="modal-box">
+      <div class="modal-icon">✔</div>
+      <h2 data-i18n="accessGranted"></h2>
+      <p id="m-text"></p>
+      <div class="stars" id="m-stars"></div>
+      <p class="m-points" id="m-points"></p>
+      <p class="m-learned" id="m-learned"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="m-map" data-i18n="toMap"></button>
+        <button class="btn btn-primary" id="m-next" data-i18n="nextMission"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/vfs.js"></script>
+  <script src="js/terminal.js"></script>
+  <script src="js/commands.js"></script>
+  <script src="js/commands-extra.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/levels-advanced.js"></script>
+  <script src="js/levels-index.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
