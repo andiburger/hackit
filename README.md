@@ -1,17 +1,36 @@
 # HACKIT 🟢
 
+[![CI](https://github.com/andiburger/hackit/actions/workflows/ci.yml/badge.svg)](https://github.com/andiburger/hackit/actions/workflows/ci.yml)
+[![Docker Image](https://github.com/andiburger/hackit/actions/workflows/docker.yml/badge.svg)](https://github.com/andiburger/hackit/actions/workflows/docker.yml)
+[![Deploy to GitHub Pages](https://github.com/andiburger/hackit/actions/workflows/pages.yml/badge.svg)](https://github.com/andiburger/hackit/actions/workflows/pages.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-00ff9c.svg)](LICENSE)
+
 An interactive hacker learning game in the browser (**German & English**). Across **21 missions** (6 chapters), you learn step by step how security testing, forensics, and cryptography work — inside a completely **simulated** terminal.
+
+**Play online:** https://andiburger.github.io/hackit/
 
 ## Getting Started
 
-Simply open [index.html](file:///Users/andreas/Documents/GitHub/hackit/index.html) in your browser — or serve it locally:
+Open [index.html](file:///Users/andreas/Documents/GitHub/hackit/index.html) in your browser, run it with Docker, or serve it locally:
 
 ```bash
+# Run via Docker (pre-built from GitHub Container Registry)
+docker run -d -p 8080:80 ghcr.io/andiburger/hackit:main
+
+# Or serve locally with Python
 python3 -m http.server 8642
 # then open http://localhost:8642
 ```
 
 No dependencies, no build step. Progress, language preference, and active sessions are automatically saved in `localStorage`.
+
+### Running Tests
+
+```bash
+node tests/unit.js
+# or on macOS with JavaScriptCore:
+/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc tests/unit.js
+```
 
 ## Features
 
