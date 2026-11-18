@@ -12,6 +12,11 @@ function advancedChapters() {
       desc: tr('Komplexe Systemanalyse, Web-APIs, Netzwerk-Sprungbretter und das große Finale.',
         'Complex system analysis, web APIs, network jump hosts and the grand finale.'),
     },
+    {
+      title: tr('Kapitel 7 · Großmeister', 'Chapter 7 · Grandmaster'),
+      desc: tr('Maximale Herausforderung: Mehrstufige Krypto-Ketten, Ablenkungsmanöver, API-Exploits und tiefes Pivoting.',
+        'Maximum challenge: multi-stage crypto chains, decoys, API exploits and deep pivoting.'),
+    },
   ];
 }
 
@@ -528,6 +533,347 @@ function advancedLevels() {
           services: [{ port: 22, name: 'ssh', version: 'OpenSSH 9.6' }],
         });
         return world([k, gateway, phantom], { ip: '10.77.0.5', user: 'hacker' });
+      },
+    },
+
+    /* ------------------------------ 22 ------------------------------ */
+    {
+      chapter: 6,
+      title: tr('Doppelte Spur', 'Double Trail'),
+      category: tr('Forensik & Krypto', 'Forensics & Crypto'),
+      difficulty: 5,
+      flag: 'HACKIT{d0ubl3_tr41l_cr4ck3d}',
+      commands: [],
+      newCommands: [
+        { cmd: tr('Krypto-Kette', 'Crypto Chain'), desc: tr('Base64 → Caesar → versteckte Datei → XOR', 'Base64 → Caesar → hidden file → XOR') },
+      ],
+      story: tr(
+        `<p>Im Netzwerk-Mitschnitt <code>packet.cap</code> verbergen sich zwischen dutzenden harmlosen Paketen verdächtige Trace-Daten. Außerdem liegen mehrere Köder-Dateien im Ordner.</p>
+         <p>Verfolge die richtige Spur durch drei Kodierungs-/Verschlüsselungsschichten, bis du <code>cipher.xor</code> öffnen kannst.</p>`,
+        `<p>Inside the network capture <code>packet.cap</code>, suspicious trace data is hidden among dozens of harmless packets. Several decoy files are also lying around.</p>
+         <p>Follow the real trail across three encoding/encryption layers until you can unlock <code>cipher.xor</code>.</p>`
+      ),
+      objectives: [
+        { text: tr('Finde die X-Trace-Zeile in packet.cap', 'Find the X-Trace line in packet.cap'), check: ev('grep', e => e.found) },
+        { text: tr('Dekodiere den Base64-Wert aus X-Trace', 'Decode the Base64 value from X-Trace'), check: ev('decode', e => e.algo === 'base64' && e.result.includes('XR')) },
+        { text: tr('Entschlüssele die Caesar-Nachricht', 'Decrypt the Caesar message'), check: ev('decode', e => e.algo === 'caesar' && e.result.includes('.vault_key')) },
+        { text: tr('Lies die versteckte Schlüsseldatei', 'Read the hidden key file'), check: ev('read', e => e.path === '/var/tmp/.vault_key') },
+        { text: tr('Entschlüssele cipher.xor', 'Decrypt cipher.xor'), check: ev('decode', e => e.algo === 'xor' && e.result.includes('HACKIT{d0ubl3')) },
+      ],
+      hints: [
+        tr('Filtere <code>packet.cap</code> mit <code>grep X-Trace packet.cap</code>. Ignoriere die Dateien <code>fake1.xor</code> und <code>fake2.b64</code>.',
+          'Filter <code>packet.cap</code> with <code>grep X-Trace packet.cap</code>. Ignore the decoy files <code>fake1.xor</code> and <code>fake2.b64</code>.'),
+        tr('Dekodiere <code>WFJMU1ZZUj0vaW5lL2d6Yy8uaW5oeWdfeHJs</code> mit <code>base64 -d</code> und jage das Ergebnis durch <code>caesar --brute</code>.',
+          'Decode <code>WFJMU1ZZUj0vaW5lL2d6Yy8uaW5oeWdfeHJs</code> with <code>base64 -d</code> and pipe the result through <code>caesar --brute</code>.'),
+        tr('ROT13 ergibt <code>KEYFILE=/var/tmp/.vault_key</code>. Lies <code>cat /var/tmp/.vault_key</code> (<code>SH4D0W</code>) und entschlüssele <code>xor -k SH4D0W --hex cipher.xor</code>.',
+          'ROT13 yields <code>KEYFILE=/var/tmp/.vault_key</code>. Read <code>cat /var/tmp/.vault_key</code> (<code>SH4D0W</code>) and decrypt with <code>xor -k SH4D0W --hex cipher.xor</code>.'),
+      ],
+      learned: tr('Mehrstufige Verschleierung lässt sich Schritt für Schritt auflösen, wenn man Köder systematisch ausschließt.',
+        'Multi-layer obfuscation can be peeled back step by step when you systematically rule out decoys.'),
+      setup() {
+        const cap = [];
+        for (let i = 1; i <= 60; i++) {
+          if (i === 37) cap.push(`0037 TCP 10.78.0.5:443 -> 10.78.0.9:8443 X-Trace: WFJMU1ZZUj0vaW5lL2d6Yy8uaW5oeWdfeHJs`);
+          else cap.push(`${String(i).padStart(4, '0')} TCP 10.78.0.${(i % 9) + 1}:80 -> 10.78.0.2:5${String(i).padStart(3, '0')} ACK seq=${i * 137}`);
+        }
+        return world([kali('10.78.0.5', {
+          'packet.cap': F(cap.join('\n')),
+          'cipher.xor': F('150475030a771b09770f7903282c0431523b6017403604663f1757360434387b5039'),
+          'fake1.xor': F('deadbeefcafebabe1234567890abcdef'),
+          'fake2.b64': F(Shell.b64encode('DECOY: Hier gibt es nichts zu sehen.')),
+        }, {
+          var: D({ tmp: D({ '.vault_key': F('SH4D0W') }) }),
+        })], { ip: '10.78.0.5', user: 'hacker' });
+      },
+    },
+
+    /* ------------------------------ 23 ------------------------------ */
+    {
+      chapter: 6,
+      title: tr('Der falsche Admin', 'The Rogue Admin'),
+      category: tr('Web & Passwörter', 'Web & Passwords'),
+      difficulty: 5,
+      flag: 'HACKIT{4p1_ch41n_4nd_cr4ck}',
+      commands: [],
+      newCommands: [
+        { cmd: 'curl -H ... > DATEI', desc: tr('API-Dump mit Header-Bypass speichern & mit john knacken', 'Save API dump with header bypass & crack via john') },
+      ],
+      story: tr(
+        `<p>Im Zielnetz <code>10.80.0.0/24</code> läuft ein Web-Dienst mit verstecktem Debug-Endpunkt. Nur wer den passenden HTTP-Header kennt, bekommt den internen Benutzer-Dump.</p>
+         <p>Sichere den Dump, knacke das Passwort des richtigen Dienstkontos mit deiner Wortliste, melde dich per SSH an und lies <code>/root/secret.flag</code>.</p>`,
+        `<p>Inside <code>10.80.0.0/24</code>, a web service exposes a hidden debug endpoint. Only requests carrying the right HTTP header receive the internal user dump.</p>
+         <p>Save the dump, crack the right service account password with your wordlist, log in via SSH and read <code>/root/secret.flag</code>.</p>`
+      ),
+      objectives: [
+        { text: tr('Finde den versteckten Endpunkt über /robots.txt', 'Discover the hidden endpoint via /robots.txt'), check: ev('curl', e => e.path === '/robots.txt') },
+        { text: tr('Rufe /debug/users mit dem Debug-Header ab', 'Fetch /debug/users with the debug header'), check: ev('debug_dump') },
+        { text: tr('Knacke das Passwort von svc_deploy mit john', 'Crack the password of svc_deploy with john'), check: ev('crack', e => e.user === 'svc_deploy') },
+        { text: tr('Melde dich als svc_deploy auf 10.80.0.10 an', 'Log in as svc_deploy on 10.80.0.10'), check: ev('login', e => e.host === 'auth-api' && e.user === 'svc_deploy') },
+        { text: tr('Lies /root/secret.flag mit sudo', 'Read /root/secret.flag using sudo'), check: ev('read', e => e.host === 'auth-api' && e.path === '/root/secret.flag') },
+      ],
+      hints: [
+        tr('Prüfe <code>curl http://10.80.0.10/</code> und <code>curl http://10.80.0.10/robots.txt</code>. Im HTML-Kommentar steht der benötigte Header <code>X-Debug: true</code>.',
+          'Check <code>curl http://10.80.0.10/</code> and <code>curl http://10.80.0.10/robots.txt</code>. The HTML comment reveals the required header <code>X-Debug: true</code>.'),
+        tr('Speichere die Hashes: <code>curl -H "X-Debug: true" http://10.80.0.10/debug/users > /tmp/hashes.txt</code> und knacke sie mit <code>john /tmp/hashes.txt --wordlist=dict.txt</code>.',
+          'Save the hashes: <code>curl -H "X-Debug: true" http://10.80.0.10/debug/users > /tmp/hashes.txt</code> and crack them with <code>john /tmp/hashes.txt --wordlist=dict.txt</code>.'),
+        tr('<code>svc_deploy:nebula99</code> → <code>ssh svc_deploy@10.80.0.10</code> → <code>sudo -l</code> zeigt <code>tail</code> → <code>sudo tail -n 5 /root/secret.flag</code>.',
+          '<code>svc_deploy:nebula99</code> → <code>ssh svc_deploy@10.80.0.10</code> → <code>sudo -l</code> shows <code>tail</code> → <code>sudo tail -n 5 /root/secret.flag</code>.'),
+      ],
+      learned: tr('Debug-Endpunkte mit leicht erratbaren Headern und schwache Service-Passwörter führen direkt zur vollständigen Übernahme.',
+        'Debug endpoints guarded by guessable headers combined with weak service passwords lead directly to full compromise.'),
+      setup() {
+        const k = kali('10.80.0.5', {
+          'dict.txt': F('admin123\nwelcome\nquasar\nnebula99\nsolaris\nmatrix01\ndecoy_pass_1'),
+        });
+        const authApi = host({
+          name: 'auth-api', ip: '10.80.0.10',
+          users: { svc_deploy: { password: 'nebula99' }, decoy: { password: 'decoy_pass_1' }, root: {} },
+          sudo: { svc_deploy: ['tail'] },
+          fs: linuxFS({
+            hostname: 'auth-api', users: { svc_deploy: {} },
+            homes: { svc_deploy: { 'note.txt': F(tr('Deployment-Konto. Prüfe sudo -l.', 'Deployment account. Check sudo -l.')) } },
+            root: { 'secret.flag': F('HACKIT{4p1_ch41n_4nd_cr4ck}') },
+          }),
+          services: [
+            { port: 22, name: 'ssh', version: 'OpenSSH 9.2' },
+            {
+              port: 80, name: 'http', version: 'uvicorn (FastAPI)',
+              web(path, _params, ctx, req = {}) {
+                if (path === '/') return '<h1>Auth Service v2</h1>\n<!-- internal debug requires X-Debug: true -->';
+                if (path === '/robots.txt') return 'User-agent: *\nDisallow: /debug/users';
+                if (path === '/debug/users') {
+                  if (!/X-Debug:\s*true/i.test(req.header || '')) return `${C('r', 'HTTP/1.1 403 Forbidden')}\nDebug header required.`;
+                  ctx.emit({ type: 'debug_dump' });
+                  return 'decoy:642f965b132a448cb37ddd7f7dc27f70\nsvc_deploy:644711b8e1b4181554d0509f2db64ca2';
+                }
+                return `${C('r', 'HTTP/1.1 404 Not Found')}`;
+              },
+            },
+          ],
+        });
+        return world([k, authApi], { ip: '10.80.0.5', user: 'hacker' }, {
+          hashdb: {
+            '642f965b132a448cb37ddd7f7dc27f70': 'decoy_pass_1',
+            '644711b8e1b4181554d0509f2db64ca2': 'nebula99',
+          },
+        });
+      },
+    },
+
+    /* ------------------------------ 24 ------------------------------ */
+    {
+      chapter: 6,
+      title: tr('Schatten im Speicher', 'Shadow in Memory'),
+      category: tr('Reverse & Pivot', 'Reverse & Pivot'),
+      difficulty: 5,
+      flag: 'HACKIT{sh4d0w_m3m0ry_p1v0t}',
+      commands: [],
+      newCommands: [
+        { cmd: 'Split-Key + Pivot', desc: tr('Schlüssel aus Binary & Bild kombinieren, dann ins Subnetz springen', 'Combine key parts from binary & image, then pivot subnets') },
+      ],
+      story: tr(
+        `<p>Der XOR-Schlüssel für die Zugangsdaten in <code>agent.bin</code> wurde auf zwei Dateien aufgeteilt: eine Hälfte steckt in der Binärdatei <code>agent.bin</code>, die andere in den Metadaten von <code>node_map.jpg</code>.</p>
+         <p>Sobald du auf dem Edge-Server bist, suche das versteckte interne Subnetz und eine vergessene Backup-Datei, um bis in die <b>Citadel</b> vorzudringen.</p>`,
+        `<p>The XOR key for the credentials inside <code>agent.bin</code> was split across two files: one half sits in the binary <code>agent.bin</code>, the other in the metadata of <code>node_map.jpg</code>.</p>
+         <p>Once on the edge server, discover the hidden internal subnet and a forgotten backup file to reach the <b>Citadel</b>.</p>`
+      ),
+      objectives: [
+        { text: tr('Finde beide Schlüssel-Teile (strings & exiftool)', 'Find both key parts (strings & exiftool)'), check: ev('exif', e => e.path.includes('node_map.jpg')) },
+        { text: tr('Entschlüssele die Edge-Zugangsdaten mit xor', 'Decrypt the edge credentials with xor'), check: ev('decode', e => e.algo === 'xor' && e.result.includes('edge:')) },
+        { text: tr('Melde dich auf edge (10.85.0.20) an', 'Log in to edge (10.85.0.20)'), check: ev('login', e => e.host === 'edge') },
+        { text: tr('Finde die Backup-Datei auf edge mit find', 'Find the backup file on edge with find'), check: ev('read', e => e.host === 'edge' && e.path.endsWith('auth.bak')) },
+        { text: tr('Springe weiter auf citadel (10.85.99.7) und lies flag.txt', 'Pivot to citadel (10.85.99.7) and read flag.txt'), check: ev('read', e => e.host === 'citadel' && e.path.endsWith('flag.txt')) },
+      ],
+      hints: [
+        tr('<code>strings agent.bin</code> zeigt <code>KEY_PART1=M4T</code> und den Hex-Block <code>285033370b1d2953677361393e471463017675017a621f6a7d</code>. <code>exiftool node_map.jpg</code> liefert <code>KEY_PART2=R1X</code>.',
+          '<code>strings agent.bin</code> shows <code>KEY_PART1=M4T</code> and hex <code>285033370b1d2953677361393e471463017675017a621f6a7d</code>. <code>exiftool node_map.jpg</code> gives <code>KEY_PART2=R1X</code>.'),
+        tr('<code>echo 285033370b1d2953677361393e471463017675017a621f6a7d | xor -k M4TR1X --hex</code> liefert <code>edge:Edg3!Pass@10.85.0.20</code>. Auf <code>edge</code> zeigt <code>env</code> das Subnetz <code>10.85.99.0/24</code>.',
+          '<code>echo 285033370b1d2953677361393e471463017675017a621f6a7d | xor -k M4TR1X --hex</code> gives <code>edge:Edg3!Pass@10.85.0.20</code>. On <code>edge</code>, <code>env</code> reveals subnet <code>10.85.99.0/24</code>.'),
+        tr('Auf <code>edge</code>: <code>find / -name "*.bak"</code> → <code>cat /var/log/auth.bak | base64 -d</code> → <code>warden:W4rd3n_C1t4d3l!</code> → <code>ssh warden@10.85.99.7</code> → <code>cat flag.txt</code>.',
+          'On <code>edge</code>: <code>find / -name "*.bak"</code> → <code>cat /var/log/auth.bak | base64 -d</code> → <code>warden:W4rd3n_C1t4d3l!</code> → <code>ssh warden@10.85.99.7</code> → <code>cat flag.txt</code>.'),
+      ],
+      learned: tr('Aufgeteilte Geheimnisse verlieren ihren Schutz, sobald ein Angreifer alle Artefakte einsammeln kann.',
+        'Split secrets lose their protection as soon as an attacker can gather all artifacts.'),
+      setup() {
+        const dump = binary(['AGENT_CFG', 'DECOY_KEY=AAAA', 'KEY_PART1=M4T', 'PAYLOAD=285033370b1d2953677361393e471463017675017a621f6a7d']);
+        const k = kali('10.85.0.5', {
+          'agent.bin': F(dump, { binary: true }),
+          'node_map.jpg': F('\xff\xd8\xff...', { binary: true, meta: { 'File Name': 'node_map.jpg', Comment: 'KEY_PART2=R1X' } }),
+        });
+        const edge = host({
+          name: 'edge', ip: '10.85.0.20',
+          users: { edge: { password: 'Edg3!Pass' }, root: {} },
+          fs: linuxFS({
+            hostname: 'edge', users: { edge: {} },
+            homes: { edge: { 'notes.txt': F(tr('Prüfe env und alte Logs (*.bak).', 'Check env and old logs (*.bak).')) } },
+            extra: { var: D({ log: D({ 'auth.bak': F('d2FyZGVuOlc0cmQzbl9DMXQ0ZDNsIQ==') }) }) },
+          }),
+          services: [{ port: 22, name: 'ssh', version: 'OpenSSH 9.1' }],
+        });
+        edge.env = { INTERNAL_SUBNET: '10.85.99.0/24' };
+        const citadel = host({
+          name: 'citadel', ip: '10.85.99.7',
+          onlyFrom: ['10.85.0.20'],
+          users: { warden: { password: 'W4rd3n_C1t4d3l!' }, root: {} },
+          fs: linuxFS({
+            hostname: 'citadel', users: { warden: {} },
+            homes: { warden: { 'flag.txt': F('HACKIT{sh4d0w_m3m0ry_p1v0t}') } },
+          }),
+          services: [{ port: 22, name: 'ssh', version: 'OpenSSH 9.6' }],
+        });
+        return world([k, edge, citadel], { ip: '10.85.0.5', user: 'hacker' });
+      },
+    },
+
+    /* ------------------------------ 25 ------------------------------ */
+    {
+      chapter: 6,
+      title: tr('Zeitgesteuerter Ausbruch', 'Timed Breakout'),
+      category: tr('Privilege Escalation', 'Privilege Escalation'),
+      difficulty: 5,
+      flag: 'HACKIT{cr0n_wr1t4bl3_pwn3d}',
+      commands: [],
+      newCommands: [
+        { cmd: 'Cron + >', desc: tr('Beschreibbares Cron-Skript mit Ausgabeumleitung nutzen', 'Leverage a writable cron script via output redirection') },
+      ],
+      story: tr(
+        `<p>Du bist als <code>guest</code> auf <code>compute</code>. <code>sudo -l</code> ist gesperrt, aber jede Minute läuft ein geplanter Root-Job.</p>
+         <p>Analysiere den Cronjob und die Dateirechte im Job-Verzeichnis. Wenn ein von <code>root</code> ausgeführtes Skript für alle beschreibbar ist, kannst du darüber auf <code>/root/flag.txt</code> zugreifen.</p>`,
+        `<p>You are logged in as <code>guest</code> on <code>compute</code>. <code>sudo -l</code> is blocked, yet a scheduled root job runs every minute.</p>
+         <p>Inspect the cron job and file permissions in its directory. When a script executed by <code>root</code> is world-writable, you can use it to read <code>/root/flag.txt</code>.</p>`
+      ),
+      objectives: [
+        { text: tr('Prüfe geplante Jobs mit crontab -l', 'Inspect scheduled jobs with crontab -l'), check: ev('crontab') },
+        { text: tr('Prüfe die Rechte unter /opt/jobs mit ls -l', 'Check permissions under /opt/jobs with ls -l'), check: ev('ls', e => e.path === '/opt/jobs') },
+        { text: tr('Schreibe einen Kopier-/Lese-Befehl in /opt/jobs/plugin.sh', 'Write a copy/read command into /opt/jobs/plugin.sh'), check(e, ctx) {
+          if (e.type !== 'write' || e.path !== '/opt/jobs/plugin.sh') return false;
+          const body = e.node.content || '';
+          if (!body.includes('/root/flag.txt')) return false;
+          const m = body.match(/\/tmp\/([^\s;>|]+)/);
+          const target = m ? m[1] : 'loot.txt';
+          ctx.sess.host.fs.children.tmp.children[target] = F('HACKIT{cr0n_wr1t4bl3_pwn3d}', { owner: 'root' });
+          return true;
+        } },
+        { text: tr('Lies die von root erzeugte Datei unter /tmp/', 'Read the root-created file under /tmp/'), check: ev('read', e => e.path.startsWith('/tmp/')) },
+      ],
+      hints: [
+        tr('<code>crontab -l</code> zeigt <code>/opt/jobs/runner.sh</code>. Prüfe <code>cat /opt/jobs/runner.sh</code> und <code>ls -l /opt/jobs</code>.',
+          '<code>crontab -l</code> shows <code>/opt/jobs/runner.sh</code>. Check <code>cat /opt/jobs/runner.sh</code> and <code>ls -l /opt/jobs</code>.'),
+        tr('<code>/opt/jobs/plugin.sh</code> hat <code>-rw-rw-rw-</code> (für jeden beschreibbar!) und wird von <code>runner.sh</code> als <code>root</code> aufgerufen.',
+          '<code>/opt/jobs/plugin.sh</code> has <code>-rw-rw-rw-</code> (world-writable!) and is invoked by <code>runner.sh</code> as <code>root</code>.'),
+        tr('Schreibe <code>echo "cat /root/flag.txt > /tmp/loot.txt" > /opt/jobs/plugin.sh</code>. Der simulierte Cronjob legt dann <code>/tmp/loot.txt</code> an – lies sie mit <code>cat /tmp/loot.txt</code>.',
+          'Run <code>echo "cat /root/flag.txt > /tmp/loot.txt" > /opt/jobs/plugin.sh</code>. The simulated cron job creates <code>/tmp/loot.txt</code> – read it with <code>cat /tmp/loot.txt</code>.'),
+      ],
+      learned: tr('Von root ausgeführte Skripte und deren Unterverzeichnisse dürfen niemals für normale Benutzer beschreibbar sein.',
+        'Scripts executed by root and their parent/plugin directories must never be writable by unprivileged users.'),
+      setup() {
+        const h = host({
+          name: 'compute', ip: '10.90.0.15',
+          users: { guest: { password: 'x' }, root: {} },
+          fs: linuxFS({
+            hostname: 'compute', users: { guest: {} },
+            homes: { guest: { 'todo.txt': F(tr('Prüfe crontab -l und die Rechte in /opt/jobs.', 'Check crontab -l and permissions in /opt/jobs.')) } },
+            root: { 'flag.txt': F('HACKIT{cr0n_wr1t4bl3_pwn3d}') },
+            extra: {
+              opt: D({
+                jobs: D({
+                  'runner.sh': F('#!/bin/bash\n/opt/jobs/plugin.sh', { exec: true, owner: 'root' }),
+                  'plugin.sh': F('#!/bin/bash\n# custom hook', { exec: true, writable: true, owner: 'root' }),
+                }),
+              }),
+            },
+          }),
+        });
+        h.cron = [{ schedule: '* * * * *', user: 'root', cmd: '/opt/jobs/runner.sh' }];
+        return world([h], { ip: '10.90.0.15', user: 'guest' });
+      },
+    },
+
+    /* ------------------------------ 26 ------------------------------ */
+    {
+      chapter: 6,
+      title: tr('Operation Eclipse', 'Operation Eclipse'),
+      category: tr('Großmeister-Finale', 'Grandmaster Finale'),
+      difficulty: 5,
+      flag: 'HACKIT{0p3r4t10n_3cl1ps3_gr4ndm4st3r}',
+      commands: [],
+      newCommands: [
+        { cmd: tr('Alles gemeistert', 'Mastered All'), desc: tr('Netzwerk, Web-Header, Base64, EXIF, XOR, Pivot & Sudo', 'Network, Web headers, Base64, EXIF, XOR, Pivot & Sudo') },
+      ],
+      story: tr(
+        `<p><b>Zero:</b> „Die letzte Prüfung, Großmeister. Im Netz <code>10.99.0.0/24</code> steht hinter dem Web-Proxy (<code>10.99.0.10</code>) der isolierte Kernrechner <b>monolith</b> (<code>10.99.0.40</code>).</p>
+         <p>Kein Start-Passwort, keine fertigen Hinweise. Knacke den Web-Zugang, arbeite dich über den Proxy auf den Monolith vor und übernimm <code>/root/eclipse.txt</code>."</p>`,
+        `<p><b>Zero:</b> "Your final trial, Grandmaster. Inside <code>10.99.0.0/24</code>, behind the web proxy (<code>10.99.0.10</code>), sits the isolated core host <b>monolith</b> (<code>10.99.0.40</code>).</p>
+         <p>No starting password, no hand-holding. Break the web auth, pivot through the proxy to monolith, and capture <code>/root/eclipse.txt</code>."</p>`
+      ),
+      objectives: [
+        { text: tr('Scanne 10.99.0.0/24', 'Scan 10.99.0.0/24'), check: ev('nmap', e => e.hosts.length >= 2) },
+        { text: tr('Fälsche das API-Token für /creds auf 10.99.0.10', 'Forge the API token for /creds on 10.99.0.10'), check: ev('eclipse_creds') },
+        { text: tr('Melde dich auf proxy (10.99.0.10) an', 'Log in to proxy (10.99.0.10)'), check: ev('login', e => e.host === 'proxy') },
+        { text: tr('Entschlüssele monolith.xor mittels EXIF-Schlüssel', 'Decrypt monolith.xor using the EXIF key'), check: ev('decode', e => e.algo === 'xor' && e.result.includes('omega:')) },
+        { text: tr('Springe auf monolith (10.99.0.40) und lies /root/eclipse.txt', 'Pivot to monolith (10.99.0.40) and read /root/eclipse.txt'), check: ev('read', e => e.host === 'monolith' && e.path === '/root/eclipse.txt') },
+      ],
+      hints: [
+        tr('<code>nmap 10.99.0.0/24</code> → <code>curl http://10.99.0.10/token</code> gibt <code>dXNlcj1hbm9uO3JvbGU9Z3Vlc3Q=</code>. Dekodiert ist das <code>user=anon;role=guest</code>; gefordert auf <code>/creds</code> wird <code>role=ops</code> im Header <code>X-Token</code>.',
+          '<code>nmap 10.99.0.0/24</code> → <code>curl http://10.99.0.10/token</code> returns <code>dXNlcj1hbm9uO3JvbGU9Z3Vlc3Q=</code> (<code>user=anon;role=guest</code>). <code>/creds</code> requires <code>role=ops</code> in header <code>X-Token</code>.'),
+        tr('<code>curl -H "X-Token: dXNlcj1hbm9uO3JvbGU9b3Bz" http://10.99.0.10/creds</code> liefert <code>relay:R3l4y#99</code>. Auf <code>proxy</code>: <code>exiftool /opt/assets/eclipse.png</code> gibt Key <code>ECL1PS</code>.',
+          '<code>curl -H "X-Token: dXNlcj1hbm9uO3JvbGU9b3Bz" http://10.99.0.10/creds</code> gives <code>relay:R3l4y#99</code>. On <code>proxy</code>: <code>exiftool /opt/assets/eclipse.png</code> reveals key <code>ECL1PS</code>.'),
+        tr('<code>xor -k ECL1PS --hex /opt/assets/monolith.xor</code> → <code>omega:0m3g4_V4ult!</code> → <code>ssh omega@10.99.0.40</code> → <code>sudo find /root -name "*.txt" -exec cat {} \\;</code>.',
+          '<code>xor -k ECL1PS --hex /opt/assets/monolith.xor</code> → <code>omega:0m3g4_V4ult!</code> → <code>ssh omega@10.99.0.40</code> → <code>sudo find /root -name "*.txt" -exec cat {} \\;</code>.'),
+      ],
+      learned: tr('Du hast alle 26 Missionen von HACKIT gemeistert – vom ersten ls bis zur vollständigen Angriffskette!',
+        'You have mastered all 26 missions of HACKIT – from your very first ls to a full multi-stage attack chain!'),
+      setup() {
+        const k = kali('10.99.0.5', {});
+        const proxy = host({
+          name: 'proxy', ip: '10.99.0.10',
+          users: { relay: { password: 'R3l4y#99' }, root: {} },
+          fs: linuxFS({
+            hostname: 'proxy', users: { relay: {} },
+            homes: { relay: { 'readme.txt': F(tr('Assets liegen unter /opt/assets.', 'Assets are stored under /opt/assets.')) } },
+            extra: {
+              opt: D({
+                assets: D({
+                  'eclipse.png': F('\x89PNG...', { binary: true, meta: { 'File Name': 'eclipse.png', Comment: 'XOR-Key=ECL1PS' } }),
+                  'monolith.xor': F('2a2e29563169752e7f56640c1377395d2472'),
+                }),
+              }),
+            },
+          }),
+          services: [
+            { port: 22, name: 'ssh', version: 'OpenSSH 9.3' },
+            {
+              port: 80, name: 'http', version: 'nginx 1.25',
+              web(path, _p, ctx, req = {}) {
+                if (path === '/') return 'Endpoints: /token , /creds (Header: X-Token, requires role=ops)';
+                if (path === '/token') return 'dXNlcj1hbm9uO3JvbGU9Z3Vlc3Q=';
+                if (path === '/creds') {
+                  const m = (req.header || '').match(/X-Token:\s*(\S+)/i);
+                  if (!m) return `${C('y', 'HTTP/1.1 401 Unauthorized')}\nMissing X-Token`;
+                  let dec = '';
+                  try { dec = Shell.b64decode(m[1]); } catch { return `${C('r', 'HTTP/1.1 400 Bad Request')}`; }
+                  if (!/role=ops\b/.test(dec)) return `${C('y', 'HTTP/1.1 403 Forbidden')}\nRequires role=ops`;
+                  ctx.emit({ type: 'eclipse_creds' });
+                  return 'SSH Proxy: relay:R3l4y#99';
+                }
+                return `${C('r', 'HTTP/1.1 404 Not Found')}`;
+              },
+            },
+          ],
+        });
+        const monolith = host({
+          name: 'monolith', ip: '10.99.0.40',
+          onlyFrom: ['10.99.0.10'],
+          users: { omega: { password: '0m3g4_V4ult!' }, root: {} },
+          sudo: { omega: ['find'] },
+          fs: linuxFS({
+            hostname: 'monolith', users: { omega: {} },
+            homes: { omega: { 'note.txt': F('sudo -l') } },
+            root: { 'eclipse.txt': F('████ OPERATION ECLIPSE ████\n\nHACKIT{0p3r4t10n_3cl1ps3_gr4ndm4st3r}') },
+          }),
+          services: [{ port: 22, name: 'ssh', version: 'OpenSSH 9.6' }],
+        });
+        return world([k, proxy, monolith], { ip: '10.99.0.5', user: 'hacker' });
       },
     },
   ];

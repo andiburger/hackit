@@ -610,12 +610,12 @@
   });
 
   /* ======================================================================
-   * 5. Levels (All 21 Missions in DE & EN)
+   * 5. Levels (All 26 Missions in DE & EN)
    * ====================================================================== */
   suite('Missions (DE & EN)', () => {
-    test('21 missions across 6 chapters with unique flags and 3 hints each', () => {
-      eq(LEVELS.list.length, 21);
-      eq(LEVELS.chapters.length, 6);
+    test('26 missions across 7 chapters with unique flags and 3 hints each', () => {
+      eq(LEVELS.list.length, 26);
+      eq(LEVELS.chapters.length, 7);
       const flags = new Set();
       LEVELS.list.forEach((l, i) => {
         eq(l.id, i + 1);
@@ -647,10 +647,15 @@
       19: [['curl http://10.50.0.90/'], ['echo dXNlcj1nYXN0O3JvbGU9Z3Vlc3Q= | base64 -d'], ['curl -H "X-Auth: dXNlcj1nYXN0O3JvbGU9YXVkaXRvcg==" http://10.50.0.90/status']],
       20: [['nmap 10.60.0.0/24'], ['ssh bridge@10.60.0.10', 'Br1dg3_2026'], ['env'], ['ssh vaultadmin@10.60.0.99', 'T1efImN3tz!'], ['cat flag.txt']],
       21: [['exiftool ausweis.jpg'], ['xor -k KRYPT0 --hex zugang.xor'], ['ssh gate@10.77.0.10', 'G4t3way!77'], ['ssh ghost@10.77.0.50', 'Ph4nt0m#Root99'], ['sudo cat /root/phantom.txt']],
+      22: [['grep X-Trace packet.cap'], ['echo WFJMU1ZZUj0vaW5lL2d6Yy8uaW5oeWdfeHJs | base64 -d | caesar --brute'], ['cat /var/tmp/.vault_key'], ['xor -k SH4D0W --hex cipher.xor']],
+      23: [['curl http://10.80.0.10/robots.txt'], ['curl -H "X-Debug: true" http://10.80.0.10/debug/users > /tmp/h.txt'], ['john /tmp/h.txt --wordlist=dict.txt'], ['ssh svc_deploy@10.80.0.10', 'nebula99'], ['sudo tail -n 5 /root/secret.flag']],
+      24: [['strings agent.bin'], ['exiftool node_map.jpg'], ['echo 285033370b1d2953677361393e471463017675017a621f6a7d | xor -k M4TR1X --hex'], ['ssh edge@10.85.0.20', 'Edg3!Pass'], ['find / -name "*.bak"'], ['cat /var/log/auth.bak | base64 -d'], ['ssh warden@10.85.99.7', 'W4rd3n_C1t4d3l!'], ['cat flag.txt']],
+      25: [['crontab -l'], ['ls -l /opt/jobs'], ['echo "cat /root/flag.txt > /tmp/loot.txt" > /opt/jobs/plugin.sh'], ['cat /tmp/loot.txt']],
+      26: [['nmap 10.99.0.0/24'], ['curl -H "X-Token: dXNlcj1hbm9uO3JvbGU9b3Bz" http://10.99.0.10/creds'], ['ssh relay@10.99.0.10', 'R3l4y#99'], ['exiftool /opt/assets/eclipse.png'], ['xor -k ECL1PS --hex /opt/assets/monolith.xor'], ['ssh omega@10.99.0.40', '0m3g4_V4ult!'], ['sudo find /root -name "*.txt" -exec cat {} \\;']],
     };
 
     for (const lang of ['de', 'en']) {
-      test(`all 21 missions solvable in ${lang}`, async () => {
+      test(`all 26 missions solvable in ${lang}`, async () => {
         I18N.set(lang);
         for (const level of LEVELS.list) {
           const steps = solutions[level.id];
@@ -696,7 +701,7 @@
       byId['btn-start'].click();
       assert(byId['screen-map'].classList.contains('active'), 'map screen active');
       eq(byId['p-alias'].textContent, 'n30n');
-      eq(byId['p-done'].textContent, '0/21');
+      eq(byId['p-done'].textContent, '0/26');
 
       // Sprache auf Englisch umschalten
       I18N.set('en');
@@ -791,7 +796,7 @@
       byId['btn-back'].click();
       byId['btn-reset'].click();
       eq(byId['p-points'].textContent, '0');
-      eq(byId['p-done'].textContent, '0/21');
+      eq(byId['p-done'].textContent, '0/26');
     });
   });
 

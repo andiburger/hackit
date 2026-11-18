@@ -5,7 +5,7 @@
 [![Deploy to GitHub Pages](https://github.com/andiburger/hackit/actions/workflows/pages.yml/badge.svg)](https://github.com/andiburger/hackit/actions/workflows/pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00ff9c.svg)](LICENSE)
 
-An interactive hacker learning game in the browser (**German & English**). Across **21 missions** (6 chapters), you learn step by step how security testing, forensics, and cryptography work — inside a completely **simulated** terminal.
+An interactive hacker learning game in the browser (**German & English**). Across **26 missions** (7 chapters), you learn step by step how security testing, forensics, and cryptography work — inside a completely **simulated** terminal.
 
 **Play online:** https://andiburger.github.io/hackit/
 
@@ -36,7 +36,7 @@ node tests/unit.js
 
 - **Bilingual (DE / EN):** Switch live between German and English at any time in the top bar — including briefings, objectives, hints, file contents, and terminal messages.
 - **Save & Resume Sessions:** Active missions are automatically saved after every command (including terminal output, command history, current `ssh`/`su` session stack, working directory, modified files, and completed objectives) and can be resumed anytime or reset via `↺ Restart`.
-- **21 Missions in 6 Chapters:** All 13 original missions (Chapters 1–4) plus 8 more challenging Expert & Master missions (Chapters 5–6).
+- **26 Missions in 7 Chapters:** All 13 original missions (Chapters 1–4), 8 Expert & Master missions (Chapters 5–6), plus 5 Grandmaster missions (Chapter 7).
 - **Enhanced Shell:** Supports pipes (`|`), output redirection (`>`, `>>`), command chaining (`;`, `&&`), Tab autocomplete, and command history (`↑`/`↓`).
 
 ## Missions
@@ -64,6 +64,11 @@ node tests/unit.js
 | 19 | Headers & Tokens / Header & Tokens | Web | `curl -H` |
 | 20 | The Jump Host / Das Sprungbrett | Networking | Multi-hop `ssh` (Bastion / Pivoting) |
 | 21 | Operation Phantom | Master Finale (Chapter 6) | Full chain combined |
+| 22 | Double Trail / Doppelte Spur | Forensics & Crypto | Base64 → Caesar → hidden file → XOR + decoys |
+| 23 | The Rogue Admin / Der falsche Admin | Web & Passwords | `curl -H` dump → `john` → `ssh` → `sudo tail` |
+| 24 | Shadow in Memory / Schatten im Speicher | Reverse & Pivot | Split XOR key (`strings` + `exiftool`) → multi-hop `ssh` |
+| 25 | Timed Breakout / Zeitgesteuerter Ausbruch | Privilege Escalation | `crontab -l` + writable script redirection (`>`) |
+| 26 | Operation Eclipse | Grandmaster Finale (Chapter 7) | Forged token → `ssh` → EXIF + XOR → pivot → `sudo find` |
 
 ## Project Structure
 
