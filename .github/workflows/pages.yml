@@ -25,7 +25,7 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p _site
-          cp index.html _site/
+          cp index.html favicon.svg _site/
           cp -r css js _site/
       - uses: actions/configure-pages@v5
         with:
