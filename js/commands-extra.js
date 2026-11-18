@@ -159,4 +159,55 @@
     parent.children[name] = VFS.F(src.content, { owner: ctx.sess.user, exec: !!src.exec, binary: !!src.binary, meta: src.meta });
     return '';
   });
+
+  def('dig', () => tr('Fragt DNS-Einträge ab (dig [TYP] DOMAIN)', 'Queries DNS records (dig [TYPE] DOMAIN)'), async (ctx, args) => {
+    if (!args.length) fail(tr('dig: Verwendung: dig [A|TXT|MX|ANY] DOMAIN', 'dig: Usage: dig [A|TXT|MX|ANY] DOMAIN'));
+    let rType = 'A', domain = args[0];
+    if (args.length >= 2 && /^(A|TXT|MX|CNAME|ANY)$/i.test(args[0])) {
+      rType = args[0].toUpperCase();
+      domain = args[1];
+    } else if (args.length >= 2 && /^(A|TXT|MX|CNAME|ANY)$/i.test(args[1])) {
+      rType = args[1].toUpperCase();
+    }
+    const dns = ctx.world.dns || {};
+    const rec = dns[domain.toLowerCase()];
+    ctx.emit({ type: 'dig', domain: domain.toLowerCase(), recordType: rType });
+    const out = [`; <<>> DiG 9.18 <<>> ${rType} ${domain}`, ';; QUESTION SECTION:', `;${domain}.\t\tIN\t${rType}`, ''];
+    if (!rec) {
+      out.push(';; status: NXDOMAIN');
+      return out.join('\n');
+    }
+    out.push(';; ANSWER SECTION:');
+    const types = rType === 'ANY' ? Object.keys(rec) : (rec[rType] ? [rType] : []);
+    for (const t of types) {
+      const vals = Array.isArray(rec[t]) ? rec[t] : [rec[t]];
+      for (const v of vals) out.push(`${domain}.\t300\tIN\t${C('c', t)}\t${C('g', v)}`);
+    }
+    if (!types.length) out.push(C('d', `; Keine ${rType}-Einträge gefunden`));
+    return out.join('\n');
+  });
+
+  def('git', () => tr('Untersucht ein Git-Repository (git status|log|show)', 'Inspects a Git repository (git status|log|show)'), async (ctx, args) => {
+    const sub = args[0];
+    if (!sub) fail(tr('git: Verwendung: git status | git log | git show HASH', 'git: Usage: git status | git log | git show HASH'));
+    const repo = ctx.sess.host.gitRepo;
+    if (!repo) fail('fatal: not a git repository (or any of the parent directories): .git');
+    ctx.emit({ type: 'git', sub, ref: args[1] || '' });
+    if (sub === 'status') {
+      return `On branch ${repo.branch || 'main'}\nnothing to commit, working tree clean`;
+    }
+    if (sub === 'log') {
+      return repo.commits.map(c =>
+        `${C('y', 'commit ' + c.hash)}\nAuthor: ${c.author}\nDate:   ${c.date}\n\n    ${c.msg}`
+      ).join('\n\n');
+    }
+    if (sub === 'show') {
+      const ref = args[1];
+      if (!ref) fail('git show: commit hash required');
+      const c = repo.commits.find(x => x.hash.startsWith(ref));
+      if (!c) fail(`fatal: bad object ${ref}`);
+      return `${C('y', 'commit ' + c.hash)}\nAuthor: ${c.author}\n\n    ${c.msg}\n\n${c.diff}`;
+    }
+    fail(`git: '${sub}' is not a supported git command (use status, log, show)`);
+  });
 })();

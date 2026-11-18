@@ -18,6 +18,7 @@
     briefing: ['📡 Briefing', '📡 Briefing'], objectives: ['🎯 Ziele', '🎯 Objectives'], tools: ['🧰 Neue Werkzeuge', '🧰 New tools'],
     hints: ['💡 Tipps', '💡 Hints'], submitFlag: ['🚩 Flag einreichen', '🚩 Submit flag'], send: ['Senden', 'Send'],
     accessGranted: ['ZUGRIFF ERLANGT', 'ACCESS GRANTED'], toMap: ['Missionsübersicht', 'Mission overview'], nextMission: ['Nächste Mission ▶', 'Next mission ▶'],
+    certBtn: ['🏆 Zertifikat', '🏆 Certificate'], certTitle: ['HACKIT ZERTIFIKAT', 'HACKIT CERTIFICATE'], close: ['Schließen', 'Close'],
   };
   const t = (key, vars = {}) => {
     let s = tr(...UI[key]);
@@ -74,6 +75,24 @@
   const isUnlocked = id => id === 1 || lv(id - 1).done;
   const potential = hints => Math.max(25, 100 - hints * 25);
   const starsFor = hints => Math.max(1, 3 - hints);
+
+  /* ---------------- Sound (Web Audio API) ---------------- */
+  let soundOn = localStorage.getItem('hackit-sound') === '1';
+  let audioCtx = null;
+  function beep(freq, dur = 0.08, type = 'sine', vol = 0.06) {
+    if (!soundOn || typeof AudioContext === 'undefined') return;
+    try {
+      audioCtx = audioCtx || new AudioContext();
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = type; o.frequency.value = freq; g.gain.value = vol;
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + dur);
+    } catch {}
+  }
+  function updateSoundBtn() { const b = $('btn-sound'); if (b) b.textContent = soundOn ? '🔊' : '🔇'; }
+  if ($('btn-sound')) $('btn-sound').addEventListener('click', () => {
+    soundOn = !soundOn; localStorage.setItem('hackit-sound', soundOn ? '1' : '0'); updateSoundBtn(); beep(660, 0.06);
+  });
 
   /* ---------------- Screens ---------------- */
   function show(id) {
@@ -147,6 +166,7 @@
     $('p-done').textContent = `${doneCount()}/${LEVELS.list.length}`;
     $('p-stars').textContent = totalStars();
     $('p-progress').style.width = (doneCount() / LEVELS.list.length * 100) + '%';
+    if ($('btn-cert')) $('btn-cert').classList.toggle('hidden', doneCount() < LEVELS.list.length);
 
     const map = $('map');
     map.innerHTML = '';
@@ -425,6 +445,7 @@
         if (o.check(e, ctx)) {
           objectivesDone[i] = true;
           msgQueue.push(C('ok', tr(' ✔ ZIEL ERREICHT ', ' ✔ OBJECTIVE COMPLETE ')) + ' ' + C('g', o.text));
+          beep(880, 0.08, 'triangle');
           renderObjectives(i);
           errCount = 0;
           resetIdle();
@@ -502,6 +523,7 @@
   function submitFlag(raw) {
     const f = raw.trim();
     if (f.toLowerCase() === level.flag.toLowerCase()) return complete();
+    beep(180, 0.14, 'sawtooth', 0.05);
     term.print(C('r', tr('✘ Falsche Flag. ', '✘ Wrong flag. ')) +
       C('d', tr('Flags haben das Format HACKIT{...} – achte auf die genaue Schreibweise.', 'Flags look like HACKIT{...} – check the exact spelling.')));
     onEvent({ type: 'error', kind: 'flag' });
@@ -537,6 +559,7 @@
     renderObjectives();
     renderHints();
     term.print('\n' + C('ok', tr(' ✔ FLAG KORREKT ', ' ✔ FLAG CORRECT ')) + ' ' + C('g', level.flag) + '\n');
+    beep(523, 0.08); setTimeout(() => beep(784, 0.14), 90);
 
     setTimeout(() => {
       const last = level.id === LEVELS.list.length;
@@ -556,7 +579,19 @@
 
   $('m-next').addEventListener('click', () => { $('modal').classList.add('hidden'); startLevel(level.id + 1); });
   $('m-map').addEventListener('click', () => { $('modal').classList.add('hidden'); renderMap(); show('map'); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').classList.contains('hidden')) $('modal').classList.add('hidden'); });
+  if ($('btn-cert')) $('btn-cert').addEventListener('click', () => {
+    $('cert-alias').textContent = `${save.alias} · ${rank()}`;
+    $('cert-stats').textContent = `${doneCount()}/${LEVELS.list.length} ${tr('Missionen', 'Missions')} · ${totalPoints()} ${tr('Punkte', 'Points')} · ${totalStars()} ★`;
+    $('cert-date').textContent = new Date().toLocaleDateString(I18N.lang === 'en' ? 'en-GB' : 'de-DE');
+    $('cert-modal').classList.remove('hidden');
+  });
+  if ($('cert-close')) $('cert-close').addEventListener('click', () => $('cert-modal').classList.add('hidden'));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (!$('modal').classList.contains('hidden')) $('modal').classList.add('hidden');
+      if ($('cert-modal') && !$('cert-modal').classList.contains('hidden')) $('cert-modal').classList.add('hidden');
+    }
+  });
   $('btn-back').addEventListener('click', leaveGame);
   $('btn-restart').addEventListener('click', () => {
     if (!level) return;
@@ -582,5 +617,6 @@
 
   document.documentElement.lang = I18N.lang;
   applyI18n();
+  updateSoundBtn();
   boot();
 })();

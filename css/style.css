@@ -246,3 +246,7 @@ body {
 .resume-bar .btn { margin-left: auto; border-color: var(--yellow); color: var(--yellow); }
 .chapter.expert h2 { color: var(--magenta); }
 .restored { color: var(--muted); border-top: 1px dashed var(--panel-border); margin: 8px 0; padding-top: 6px; font-size: 12px; }
+.cert-box { border-color: var(--cyan); box-shadow: 0 0 60px rgba(45,226,255,.3); }
+.cert-alias { font-family: var(--display); font-size: 26px; color: var(--cyan); margin: 8px 0; }
+.cert-stats { color: var(--yellow); font-size: 15px; margin: 6px 0; }
+.cert-date { color: var(--muted); font-size: 12px; }

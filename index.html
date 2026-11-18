@@ -7,10 +7,10 @@
   <title>HACKIT</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <meta name="theme-color" content="#05080a" />
-  <meta name="description" content="Interactive hacker learning game in the browser – 26 simulated missions in German and English." />
+  <meta name="description" content="Interactive hacker learning game in the browser – 30 simulated missions in German and English." />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="HACKIT – The Hacker Learning Game" />
-  <meta property="og:description" content="Learn terminal, forensics, cryptography, networking and web security across 26 simulated missions (DE/EN)." />
+  <meta property="og:description" content="Learn terminal, forensics, cryptography, networking and web security across 30 simulated missions (DE/EN)." />
   <meta property="og:url" content="https://andiburger.github.io/hackit/" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@600;900&display=swap" rel="stylesheet" />
@@ -50,6 +50,8 @@
         <div class="stat"><span id="p-stars">0</span><small data-i18n="stars"></small></div>
       </div>
       <div class="lang-switch"></div>
+      <button class="btn btn-ghost btn-small" id="btn-sound" title="Sound">🔇</button>
+      <button class="btn btn-ghost btn-small hidden" id="btn-cert" data-i18n="certBtn"></button>
       <button class="btn btn-ghost btn-small" id="btn-reset" data-i18n="reset"></button>
     </header>
     <div class="progress-wrap"><div class="progress" id="p-progress"></div></div>
@@ -124,6 +126,20 @@
       <div class="modal-actions">
         <button class="btn btn-ghost" id="m-map" data-i18n="toMap"></button>
         <button class="btn btn-primary" id="m-next" data-i18n="nextMission"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CERTIFICATE MODAL ========== -->
+  <div class="modal hidden" id="cert-modal">
+    <div class="modal-box cert-box">
+      <div class="modal-icon">🏆</div>
+      <h2 data-i18n="certTitle"></h2>
+      <p class="cert-alias" id="cert-alias"></p>
+      <p class="cert-stats" id="cert-stats"></p>
+      <p class="cert-date" id="cert-date"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cert-close" data-i18n="close"></button>
       </div>
     </div>
   </div>
