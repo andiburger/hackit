@@ -615,7 +615,7 @@ ${C('w', 'lo')}: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
       fail(tr(`${name}: Befehl nicht gefunden. Tippe ${C('g', 'help')} für eine Liste.`,
         `${name}: command not found. Type ${C('g', 'help')} for a list.`));
     }
-    if (!ctx.unlocked.includes(name) && !['logout', 'history', 'id', 'wc', 'echo', 'mission'].includes(name)) {
+    if (!ctx.unlocked.includes(name) && !['logout', 'history', 'id', 'wc', 'echo', 'mission', 'mkdir', 'touch', 'rm', 'cp'].includes(name)) {
       ctx.emit({ type: 'error', kind: 'locked' });
       fail(tr(`${name}: 🔒 Dieses Werkzeug lernst du in einer späteren Mission kennen.`,
         `${name}: 🔒 You will learn this tool in a later mission.`));

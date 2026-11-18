@@ -208,7 +208,7 @@
     prompt: $('term-prompt'), input: $('term-input'), title: $('term-title'),
   });
 
-  let ctx = null, level = null, objectivesDone = [], msgQueue = [], errCount = 0, idleTimer = null, finished = false, writes = [];
+  let ctx = null, level = null, objectivesDone = [], msgQueue = [], errCount = 0, idleTimer = null, finished = false, writes = [], chmods = [];
 
   function replaceAlias(node) {
     if (node.type === 'file' && typeof node.content === 'string') node.content = node.content.replace(/\{alias\}/g, save.alias);
@@ -240,7 +240,7 @@
       showMission: () => missionText(),
     };
     objectivesDone = level.objectives.map(() => false);
-    msgQueue = []; errCount = 0; finished = false; writes = [];
+    msgQueue = []; errCount = 0; finished = false; writes = []; chmods = [];
     if (fresh) delete save.sessions[id];
     const saved = save.sessions[id];
 
@@ -308,8 +308,9 @@
       objectives: objectivesDone.slice(),
       history: term.history.slice(-100),
       lines,
-      stack: ctx.sessions.map(s => ({ ip: s.host.ip, user: s.user, cwd: s.cwd, home: s.home })),
+      stack: ctx.sessions.map(s => ({ ip: s.host.ip, user: s.user, cwd: s.cwd, home: s.home, env: s.env ? { ...s.env } : null })),
       writes,
+      chmods,
       errCount,
     };
     save.active = level.id;
@@ -334,10 +335,20 @@
       else if (!existing) dir.children[name] = VFS.F(w.content, { owner: w.owner });
     }
     writes = (s.writes || []).slice();
-    // Sitzungs-Stapel (ssh/su) wiederherstellen
+    // chmod +x/-x Änderungen wiederherstellen
+    for (const ch of s.chmods || []) {
+      const h = ctx.world.hosts[ch.ip];
+      const nd = h && VFS.get(h.fs, ch.path.split('/').filter(Boolean));
+      if (nd) nd.exec = !!ch.exec;
+    }
+    chmods = (s.chmods || []).slice();
+    // Sitzungs-Stapel (ssh/su) inkl. env wiederherstellen
     const stack = (s.stack || []).map(x => {
       const h = ctx.world.hosts[x.ip];
-      return h && { host: h, user: x.user, cwd: x.cwd, home: x.home };
+      if (!h) return null;
+      const sess = { host: h, user: x.user, cwd: x.cwd, home: x.home };
+      if (x.env) sess.env = Object.assign(Object.create(null), x.env);
+      return sess;
     }).filter(Boolean);
     if (stack.length) ctx.sessions = stack;
     if (Array.isArray(s.objectives) && s.objectives.length === objectivesDone.length) objectivesDone = s.objectives.slice();
@@ -394,6 +405,11 @@
       const h = Object.values(ctx.world.hosts).find(x => x.name === e.host) || ctx.sess.host;
       writes = writes.filter(w => !(w.ip === h.ip && w.path === e.path));
       writes.push({ ip: h.ip, path: e.path, content: e.node.content, owner: e.node.owner });
+    }
+    if (e.type === 'chmod') {
+      const h = Object.values(ctx.world.hosts).find(x => x.name === e.host) || ctx.sess.host;
+      chmods = chmods.filter(c => !(c.ip === h.ip && c.path === e.path));
+      chmods.push({ ip: h.ip, path: e.path, exec: String(e.mode).includes('+x') });
     }
     if (e.type === 'error') {
       errCount++;
@@ -540,6 +556,7 @@
 
   $('m-next').addEventListener('click', () => { $('modal').classList.add('hidden'); startLevel(level.id + 1); });
   $('m-map').addEventListener('click', () => { $('modal').classList.add('hidden'); renderMap(); show('map'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').classList.contains('hidden')) $('modal').classList.add('hidden'); });
   $('btn-back').addEventListener('click', leaveGame);
   $('btn-restart').addEventListener('click', () => {
     if (!level) return;

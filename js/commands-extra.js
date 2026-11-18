@@ -97,4 +97,66 @@
       ...jobs.map(j => `${C('c', j.schedule || '* * * * *')}  ${C('y', (j.user || 'root').padEnd(6))}  ${j.cmd}`),
     ].join('\n');
   });
+
+  const BAD_NAME = new Set(['__proto__', 'constructor', 'prototype']);
+  const canWriteDir = (ctx, dir) => ctx.sess.user === 'root' || dir.writable || dir.owner === ctx.sess.user;
+
+  def('mkdir', () => tr('Erstellt ein Verzeichnis (mkdir ORDNER)', 'Creates a directory (mkdir DIR)'), async (ctx, args) => {
+    if (!args.length) fail(tr('mkdir: Verwendung: mkdir ORDNER', 'mkdir: Usage: mkdir DIR'));
+    const parts = VFS.resolve(ctx.sess, args[0]);
+    const name = parts.pop();
+    if (!name || BAD_NAME.has(name)) fail(`mkdir: ${args[0]}: ${tr('Ungültiger Name', 'Invalid name')}`);
+    const parent = VFS.get(ctx.sess.host.fs, parts);
+    if (!parent || parent.type !== 'dir') fail(`mkdir: ${args[0]}: ${tr('Pfad existiert nicht', 'No such file or directory')}`);
+    if (!canWriteDir(ctx, parent)) fail(`mkdir: ${args[0]}: Permission denied`);
+    if (Object.prototype.hasOwnProperty.call(parent.children, name)) fail(`mkdir: ${args[0]}: File exists`);
+    parent.children[name] = VFS.D({}, { owner: ctx.sess.user });
+    return '';
+  });
+
+  def('touch', () => tr('Erstellt eine leere Datei (touch DATEI)', 'Creates an empty file (touch FILE)'), async (ctx, args) => {
+    if (!args.length) fail(tr('touch: Verwendung: touch DATEI', 'touch: Usage: touch FILE'));
+    const parts = VFS.resolve(ctx.sess, args[0]);
+    const name = parts.pop();
+    if (!name || BAD_NAME.has(name)) fail(`touch: ${args[0]}: ${tr('Ungültiger Name', 'Invalid name')}`);
+    const parent = VFS.get(ctx.sess.host.fs, parts);
+    if (!parent || parent.type !== 'dir') fail(`touch: ${args[0]}: No such file or directory`);
+    if (!Object.prototype.hasOwnProperty.call(parent.children, name)) {
+      if (!canWriteDir(ctx, parent)) fail(`touch: ${args[0]}: Permission denied`);
+      parent.children[name] = VFS.F('', { owner: ctx.sess.user });
+    }
+    return '';
+  });
+
+  def('rm', () => tr('Löscht eine Datei (rm DATEI)', 'Removes a file (rm FILE)'), async (ctx, args) => {
+    if (!args.length) fail(tr('rm: Verwendung: rm DATEI', 'rm: Usage: rm FILE'));
+    const parts = VFS.resolve(ctx.sess, args[0]);
+    const name = parts.pop();
+    if (!name || BAD_NAME.has(name)) fail(`rm: ${args[0]}: Invalid name`);
+    const parent = VFS.get(ctx.sess.host.fs, parts);
+    if (!parent || parent.type !== 'dir' || !Object.prototype.hasOwnProperty.call(parent.children, name)) {
+      fail(`rm: ${args[0]}: No such file or directory`);
+    }
+    const target = parent.children[name];
+    if (target.type === 'dir' && Object.keys(target.children).length) fail(`rm: ${args[0]}: Is a directory`);
+    if (!canWriteDir(ctx, parent) && target.owner !== ctx.sess.user) fail(`rm: ${args[0]}: Permission denied`);
+    delete parent.children[name];
+    return '';
+  });
+
+  def('cp', () => tr('Kopiert eine Datei (cp QUELLE ZIEL)', 'Copies a file (cp SRC DEST)'), async (ctx, args) => {
+    if (args.length < 2) fail(tr('cp: Verwendung: cp QUELLE ZIEL', 'cp: Usage: cp SRC DEST'));
+    const src = readFile(ctx, args[0], 'cp');
+    const parts = VFS.resolve(ctx.sess, args[1]);
+    let name = parts.pop();
+    let parent = VFS.get(ctx.sess.host.fs, parts);
+    if (parent && parent.type === 'dir' && Object.prototype.hasOwnProperty.call(parent.children, name) && parent.children[name].type === 'dir') {
+      parent = parent.children[name];
+      name = args[0].split('/').pop();
+    }
+    if (!name || BAD_NAME.has(name) || !parent || parent.type !== 'dir') fail(`cp: ${args[1]}: No such file or directory`);
+    if (!canWriteDir(ctx, parent)) fail(`cp: ${args[1]}: Permission denied`);
+    parent.children[name] = VFS.F(src.content, { owner: ctx.sess.user, exec: !!src.exec, binary: !!src.binary, meta: src.meta });
+    return '';
+  });
 })();

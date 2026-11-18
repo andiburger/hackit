@@ -89,7 +89,7 @@ body {
 
 /* ---------- Topbar ---------- */
 .topbar {
-  display: flex; align-items: center; gap: 22px; padding: 12px 24px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 16px 22px; padding: 12px 24px;
   background: rgba(3,10,8,.85); border-bottom: 1px solid var(--panel-border); backdrop-filter: blur(6px);
 }
 .brand { font-family: var(--display); font-size: 24px; color: var(--green); letter-spacing: 3px; text-shadow: 0 0 10px rgba(0,255,156,.6); }
@@ -219,6 +219,7 @@ body {
 
 @media (max-width: 860px) {
   body { overflow: auto; }
+  .topbar { gap: 10px; padding: 10px 14px; }
   .game { grid-template-columns: 1fr; grid-template-rows: auto 70vh; overflow-y: auto; }
   .briefing { overflow: visible; }
   .player-stats .stat:nth-child(3) { display: none; }

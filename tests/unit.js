@@ -556,6 +556,8 @@
       includes(ctx.out.pop(), 'nicht gefunden');
       await Shell.execute(ctx, 'export __proto__=bad');
       includes(ctx.out.pop(), 'Ungültiger');
+      await Shell.execute(ctx, 'mkdir /tmp/d && touch /tmp/d/f && cp /tmp/d/f /tmp/d/g && rm /tmp/d/f');
+      assert(VFS.get(ctx.sess.host.fs, ['tmp', 'd', 'g']) && !VFS.get(ctx.sess.host.fs, ['tmp', 'd', 'f']));
     });
     test('edge cases: help, ls -l, cat binary, id, grep -r, find -perm/-exec, nmap single, su/sudo/ssh/curl errors, syntax', async () => {
       const restricted = VFS.host({
@@ -755,6 +757,9 @@
       assert(!byId['modal'].classList.contains('hidden'), 'success modal shown');
       includes(byId['m-points'].textContent, '+75');
       eq(JSON.parse(localStorage.getItem('hackit-save-v1')).levels[1].stars, 2);
+      // Escape schließt Modal
+      docListeners.keydown.forEach(fn => fn({ key: 'Escape' }));
+      assert(byId['modal'].classList.contains('hidden'), 'Escape closes modal');
 
       // Nächste Mission starten
       byId['m-next'].click();
