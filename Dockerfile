@@ -1,7 +1,7 @@
 FROM nginx:alpine
 
 # Statische Spieldateien kopieren
-COPY index.html /usr/share/nginx/html/
+COPY index.html favicon.svg /usr/share/nginx/html/
 COPY css/ /usr/share/nginx/html/css/
 COPY js/ /usr/share/nginx/html/js/
 
