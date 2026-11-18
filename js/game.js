@@ -53,7 +53,7 @@
   function persist() {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
     catch (e) { // Speicher voll → Terminal-Verläufe kürzen
-      Object.values(save.sessions).forEach(s => { s.out = ''; });
+      Object.values(save.sessions).forEach(s => { s.lines = []; });
       try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { console.warn('Speichern fehlgeschlagen', e); }
     }
   }
@@ -302,13 +302,12 @@
     if (!ctx || !level) return;
     if (finished) { delete save.sessions[level.id]; if (save.active === level.id) save.active = null; persist(); return; }
     const nodes = [...term.out.children].slice(-300);
-    let out = nodes.map(n => n.outerHTML).join('');
-    if (out.length > 120000) out = out.slice(-120000).replace(/^[^<]*?(?=<div)/, '');
+    const lines = nodes.map(n => n.textContent);
     save.sessions[level.id] = {
       ts: Date.now(),
       objectives: objectivesDone.slice(),
       history: term.history.slice(-100),
-      out,
+      lines,
       stack: ctx.sessions.map(s => ({ ip: s.host.ip, user: s.user, cwd: s.cwd, home: s.home })),
       writes,
       errCount,
@@ -345,7 +344,8 @@
     errCount = s.errCount || 0;
     term.history = (s.history || []).slice();
     term.hIndex = term.history.length;
-    term.out.innerHTML = s.out || '';
+    term.clear();
+    if (Array.isArray(s.lines)) s.lines.forEach(l => term.print(l));
     renderObjectives();
   }
 

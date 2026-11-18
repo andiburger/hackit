@@ -62,8 +62,11 @@
     const eq = args[0].indexOf('=');
     if (eq <= 0) fail(tr('export: Verwendung: export NAME=WERT', 'export: Usage: export NAME=VALUE'));
     const k = args[0].slice(0, eq);
+    if (['__proto__', 'constructor', 'prototype'].includes(k)) {
+      fail(tr('export: Ungültiger Variablenname', 'export: Invalid variable name'));
+    }
     const v = args.slice(0).join(' ').slice(eq + 1);
-    ctx.sess.env = ctx.sess.env || {};
+    ctx.sess.env = ctx.sess.env || Object.create(null);
     ctx.sess.env[k] = v;
     ctx.emit({ type: 'export', key: k, value: v, host: ctx.sess.host.name });
     return '';

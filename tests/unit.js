@@ -552,6 +552,10 @@
       includes(ctx.out.pop().toLowerCase(), 'hex');
       await Shell.execute(ctx, 'chmod +x /etc/passwd');
       includes(ctx.out.pop(), 'zulässig');
+      await Shell.execute(ctx, 'cat toString');
+      includes(ctx.out.pop(), 'nicht gefunden');
+      await Shell.execute(ctx, 'export __proto__=bad');
+      includes(ctx.out.pop(), 'Ungültiger');
     });
     test('edge cases: help, ls -l, cat binary, id, grep -r, find -perm/-exec, nmap single, su/sudo/ssh/curl errors, syntax', async () => {
       const restricted = VFS.host({

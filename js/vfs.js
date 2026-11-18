@@ -61,10 +61,12 @@ const VFS = (() => {
     return parts;
   }
 
+  const hasOwn = (obj, k) => Object.prototype.hasOwnProperty.call(obj, k) && k !== '__proto__' && k !== 'constructor' && k !== 'prototype';
+
   function get(fs, parts) {
     let n = fs;
     for (const part of parts) {
-      if (!n || n.type !== 'dir' || !n.children[part]) return null;
+      if (!n || n.type !== 'dir' || !hasOwn(n.children, part)) return null;
       n = n.children[part];
     }
     return n;
@@ -90,7 +92,7 @@ const VFS = (() => {
     let n = fs;
     for (const part of parts) {
       if (n.type === 'dir' && !canRead(sess, n)) return false;
-      n = n.children[part];
+      n = hasOwn(n.children || {}, part) ? n.children[part] : null;
       if (!n) return true;
     }
     return true;
