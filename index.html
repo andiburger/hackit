@@ -51,6 +51,9 @@
       </div>
       <div class="lang-switch"></div>
       <button class="btn btn-ghost btn-small" id="btn-sound" title="Sound">🔇</button>
+      <button class="btn btn-ghost btn-small" id="btn-export" data-i18n="exportBtn"></button>
+      <button class="btn btn-ghost btn-small" id="btn-import" data-i18n="importBtn"></button>
+      <input type="file" id="import-file" accept=".json" class="hidden" />
       <button class="btn btn-ghost btn-small hidden" id="btn-cert" data-i18n="certBtn"></button>
       <button class="btn btn-ghost btn-small" id="btn-reset" data-i18n="reset"></button>
     </header>
@@ -64,7 +67,9 @@
     <header class="topbar">
       <button class="btn btn-ghost btn-small" id="btn-back" data-i18n="back"></button>
       <div class="mission-title"><span id="g-num">01</span> <span id="g-title"></span></div>
+      <span class="timer-pill" id="g-timer">⏱ 00:00</span>
       <span class="save-indicator" id="save-indicator" data-i18n="saved"></span>
+      <button class="btn btn-ghost btn-small" id="btn-cheat" data-i18n="cheatBtn"></button>
       <button class="btn btn-ghost btn-small" id="btn-restart" data-i18n="restart"></button>
       <div class="lang-switch"></div>
       <div class="player-stats">
@@ -126,6 +131,17 @@
       <div class="modal-actions">
         <button class="btn btn-ghost" id="m-map" data-i18n="toMap"></button>
         <button class="btn btn-primary" id="m-next" data-i18n="nextMission"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CHEATSHEET MODAL ========== -->
+  <div class="modal hidden" id="cheat-modal">
+    <div class="modal-box cheat-box">
+      <h2 data-i18n="cheatTitle"></h2>
+      <div id="cheat-list" class="cheat-list"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cheat-close" data-i18n="close"></button>
       </div>
     </div>
   </div>

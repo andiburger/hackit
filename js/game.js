@@ -19,6 +19,8 @@
     hints: ['💡 Tipps', '💡 Hints'], submitFlag: ['🚩 Flag einreichen', '🚩 Submit flag'], send: ['Senden', 'Send'],
     accessGranted: ['ZUGRIFF ERLANGT', 'ACCESS GRANTED'], toMap: ['Missionsübersicht', 'Mission overview'], nextMission: ['Nächste Mission ▶', 'Next mission ▶'],
     certBtn: ['🏆 Zertifikat', '🏆 Certificate'], certTitle: ['HACKIT ZERTIFIKAT', 'HACKIT CERTIFICATE'], close: ['Schließen', 'Close'],
+    exportBtn: ['⬇ Export', '⬇ Export'], importBtn: ['⬆ Import', '⬆ Import'],
+    cheatBtn: ['📖 Befehle', '📖 Commands'], cheatTitle: ['SPICKZETTEL', 'COMMAND CHEATSHEET'],
   };
   const t = (key, vars = {}) => {
     let s = tr(...UI[key]);
@@ -49,6 +51,7 @@
     s.alias ||= '';
     s.levels ||= {};
     s.sessions ||= {};
+    s.daily ||= {};
     return s;
   }
   function persist() {
@@ -58,7 +61,9 @@
       try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { console.warn('Speichern fehlgeschlagen', e); }
     }
   }
-  const lv = id => (save.levels[id] ||= { done: false, stars: 0, points: 0, hints: 0 });
+  const lv = id => (id === 'daily'
+    ? (save.daily[new Date().toISOString().slice(0, 10)] ||= { done: false, stars: 0, points: 0, hints: 0 })
+    : (save.levels[id] ||= { done: false, stars: 0, points: 0, hints: 0 }));
 
   const maxPoints = () => LEVELS.list.length * 100;
   const totalPoints = () => Object.values(save.levels).reduce((a, l) => a + (l.points || 0), 0);
@@ -183,6 +188,20 @@
       map.appendChild(bar);
     }
 
+    // Daily Challenge Banner
+    if (typeof dailyLevel === 'function') {
+      const today = new Date().toISOString().slice(0, 10);
+      const ds = save.daily[today];
+      const dBar = document.createElement('div');
+      dBar.className = 'daily-bar';
+      dBar.innerHTML = `<span>🎲 <b>Daily Challenge (${today})</b> · ${ds && ds.done
+        ? tr(`Gelöst in ${ds.bestSec || 0}s ★`, `Solved in ${ds.bestSec || 0}s ★`)
+        : tr('Jeden Tag ein neues Zufalls-System!', 'A new procedural system every day!')}</span>
+        <button class="btn btn-small">${ds && ds.done ? tr('Nochmal ▶', 'Replay ▶') : tr('Starten ▶', 'Play ▶')}</button>`;
+      dBar.querySelector('button').addEventListener('click', () => startLevel('daily'));
+      map.appendChild(dBar);
+    }
+
     const firstOpen = LEVELS.list.find(l => isUnlocked(l.id) && !lv(l.id).done);
     LEVELS.chapters.forEach((ch, ci) => {
       const levels = LEVELS.list.filter(l => l.chapter === ci);
@@ -207,7 +226,7 @@
           <h4>${l.title}</h4>
           <div class="meta">
             <span class="diff">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= l.difficulty ? 'on' : ''}"></i>`).join('')}</span>
-            <span class="st">${s.done ? stars : open ? '' : tr('gesperrt', 'locked')}</span>
+            <span class="st">${s.done ? `${s.bestSec ? `<small class="c-d">⏱${s.bestSec}s</small> ` : ''}${stars}` : open ? '' : tr('gesperrt', 'locked')}</span>
           </div>`;
         if (open) card.addEventListener('click', () => startLevel(l.id));
         cards.appendChild(card);
@@ -218,7 +237,7 @@
 
   $('btn-reset').addEventListener('click', () => {
     if (confirm(tr('Gesamten Fortschritt (inkl. gespeicherter Sessions) wirklich löschen?', 'Really delete all progress (including saved sessions)?'))) {
-      save = { alias: save.alias, levels: {}, sessions: {} }; persist(); renderMap();
+      save = { alias: save.alias, levels: {}, sessions: {}, daily: {} }; persist(); renderMap();
     }
   });
 
@@ -228,7 +247,24 @@
     prompt: $('term-prompt'), input: $('term-input'), title: $('term-title'),
   });
 
-  let ctx = null, level = null, objectivesDone = [], msgQueue = [], errCount = 0, idleTimer = null, finished = false, writes = [], chmods = [];
+  let ctx = null, level = null, objectivesDone = [], msgQueue = [], errCount = 0, idleTimer = null, finished = false, writes = [], chmods = [], elapsedBase = 0, runStartedAt = 0, timerInt = null;
+
+  const fmtTime = ms => {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    return `⏱ ${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  };
+  const currentElapsed = () => elapsedBase + (runStartedAt ? Date.now() - runStartedAt : 0);
+  function startTimer() {
+    clearInterval(timerInt);
+    runStartedAt = Date.now();
+    if ($('g-timer')) $('g-timer').textContent = fmtTime(currentElapsed());
+    timerInt = setInterval(() => { if ($('g-timer')) $('g-timer').textContent = fmtTime(currentElapsed()); }, 1000);
+  }
+  function stopTimer() {
+    elapsedBase = currentElapsed();
+    runStartedAt = 0;
+    clearInterval(timerInt);
+  }
 
   function replaceAlias(node) {
     if (node.type === 'file' && typeof node.content === 'string') node.content = node.content.replace(/\{alias\}/g, save.alias);
@@ -236,13 +272,14 @@
   }
 
   function unlockedFor(id) {
+    if (id === 'daily') return Object.keys(Shell.cmds);
     const unlocked = [];
     LEVELS.list.filter(l => l.id <= id).forEach(l => l.commands.forEach(c => { if (!unlocked.includes(c)) unlocked.push(c); }));
     return unlocked;
   }
 
   function startLevel(id, { fresh = false } = {}) {
-    level = LEVELS.list.find(l => l.id === id);
+    level = id === 'daily' && typeof dailyLevel === 'function' ? dailyLevel() : LEVELS.list.find(l => l.id === id);
     const world = level.setup();
     Object.values(world.hosts).forEach(h => replaceAlias(h.fs));
     const startHost = world.hosts[world.start.ip];
@@ -260,7 +297,7 @@
       showMission: () => missionText(),
     };
     objectivesDone = level.objectives.map(() => false);
-    msgQueue = []; errCount = 0; finished = false; writes = []; chmods = [];
+    msgQueue = []; errCount = 0; finished = false; writes = []; chmods = []; elapsedBase = 0; runStartedAt = 0;
     if (fresh) delete save.sessions[id];
     const saved = save.sessions[id];
 
@@ -280,8 +317,9 @@
     } else {
       printBanner(startHost, u);
     }
-    save.active = id;
+    if (!level.isDaily) save.active = id;
     saveSession();
+    startTimer();
     resetIdle();
     setTimeout(() => term.focus(), 50);
   }
@@ -303,7 +341,7 @@
   }
 
   function renderSidebar() {
-    $('g-num').textContent = String(level.id).padStart(2, '0');
+    $('g-num').textContent = level.isDaily ? '🎲' : String(level.id).padStart(2, '0');
     $('g-title').textContent = level.title;
     $('g-story').innerHTML = level.story;
     $('g-newcmds').innerHTML = level.newCommands.map(c =>
@@ -319,7 +357,7 @@
 
   /* ---------------- Sessions speichern ---------------- */
   function saveSession() {
-    if (!ctx || !level) return;
+    if (!ctx || !level || level.isDaily) return;
     if (finished) { delete save.sessions[level.id]; if (save.active === level.id) save.active = null; persist(); return; }
     const nodes = [...term.out.children].slice(-300);
     const lines = nodes.map(n => n.textContent);
@@ -331,6 +369,7 @@
       stack: ctx.sessions.map(s => ({ ip: s.host.ip, user: s.user, cwd: s.cwd, home: s.home, env: s.env ? { ...s.env } : null })),
       writes,
       chmods,
+      elapsedMs: currentElapsed(),
       errCount,
     };
     save.active = level.id;
@@ -372,6 +411,7 @@
     }).filter(Boolean);
     if (stack.length) ctx.sessions = stack;
     if (Array.isArray(s.objectives) && s.objectives.length === objectivesDone.length) objectivesDone = s.objectives.slice();
+    elapsedBase = s.elapsedMs || 0;
     errCount = s.errCount || 0;
     term.history = (s.history || []).slice();
     term.hIndex = term.history.length;
@@ -381,6 +421,7 @@
   }
 
   function leaveGame() {
+    stopTimer();
     saveSession();
     clearTimeout(idleTimer);
     renderMap();
@@ -545,15 +586,20 @@
   function complete() {
     if (finished) return;
     finished = true;
+    stopTimer();
     clearTimeout(idleTimer);
+    const sec = Math.max(1, Math.round(elapsedBase / 1000));
     const s = lv(level.id);
     const pts = potential(s.hints), stars = starsFor(s.hints);
     const first = !s.done;
     s.done = true;
     s.points = Math.max(s.points, pts);
     s.stars = Math.max(s.stars, stars);
-    delete save.sessions[level.id];
-    if (save.active === level.id) save.active = null;
+    s.bestSec = s.bestSec ? Math.min(s.bestSec, sec) : sec;
+    if (!level.isDaily) {
+      delete save.sessions[level.id];
+      if (save.active === level.id) save.active = null;
+    }
     persist();
     objectivesDone = objectivesDone.map(() => true);
     renderObjectives();
@@ -562,14 +608,18 @@
     beep(523, 0.08); setTimeout(() => beep(784, 0.14), 90);
 
     setTimeout(() => {
-      const last = level.id === LEVELS.list.length;
-      $('m-text').textContent = last
-        ? tr(`Unglaublich, ${save.alias}! Du hast alle Missionen gemeistert.`, `Incredible, ${save.alias}! You have mastered every mission.`)
-        : tr(`Mission „${level.title}“ abgeschlossen.`, `Mission "${level.title}" complete.`);
+      const last = level.isDaily || level.id === LEVELS.list.length;
+      $('m-text').textContent = level.isDaily
+        ? tr(`Daily Challenge gemeistert in ${sec}s!`, `Daily Challenge mastered in ${sec}s!`)
+        : last
+          ? tr(`Unglaublich, ${save.alias}! Du hast alle Missionen gemeistert.`, `Incredible, ${save.alias}! You have mastered every mission.`)
+          : tr(`Mission „${level.title}“ abgeschlossen.`, `Mission "${level.title}" complete.`);
       $('m-stars').innerHTML = [1, 2, 3].map(i => `<span class="${i <= stars ? 'on' : ''}">★</span>`).join('');
-      $('m-points').textContent = first
-        ? `+${pts} ${tr('Punkte', 'points')} · ${tr('Rang', 'Rank')}: ${rank()}`
-        : `${pts} ${tr('Punkte', 'points')} (${tr('Bestwert', 'best')}: ${s.points}) · ${tr('Rang', 'Rank')}: ${rank()}`;
+      $('m-points').textContent = level.isDaily
+        ? `⏱ ${sec}s (${tr('Bestzeit', 'best')}: ${s.bestSec}s)`
+        : first
+          ? `+${pts} ${tr('Punkte', 'points')} · ⏱ ${sec}s · ${tr('Rang', 'Rank')}: ${rank()}`
+          : `${pts} ${tr('Punkte', 'points')} (${tr('Bestwert', 'best')}: ${s.points}) · ⏱ ${sec}s · ${tr('Rang', 'Rank')}: ${rank()}`;
       $('m-learned').innerHTML = `🧠 <b>${tr('Gelernt', 'Learned')}:</b> ${level.learned}`;
       $('m-next').classList.toggle('hidden', last);
       $('modal').classList.remove('hidden');
@@ -586,10 +636,49 @@
     $('cert-modal').classList.remove('hidden');
   });
   if ($('cert-close')) $('cert-close').addEventListener('click', () => $('cert-modal').classList.add('hidden'));
+  if ($('btn-cheat')) $('btn-cheat').addEventListener('click', () => {
+    if (!ctx) return;
+    $('cheat-list').innerHTML = ctx.unlocked.map(c => `<div class="cheat-row"><code data-c="${c}">${c}</code><span>${Terminal.esc(Shell.describe(c))}</span></div>`).join('');
+    $('cheat-list').querySelectorAll('code').forEach(el => el.addEventListener('click', () => {
+      term.input.value = el.dataset.c + ' ';
+      $('cheat-modal').classList.add('hidden');
+      term.focus();
+    }));
+    $('cheat-modal').classList.remove('hidden');
+  });
+  if ($('cheat-close')) $('cheat-close').addEventListener('click', () => $('cheat-modal').classList.add('hidden'));
+  if ($('btn-export')) $('btn-export').addEventListener('click', () => {
+    const data = JSON.stringify({ alias: save.alias, levels: save.levels, daily: save.daily }, null, 2);
+    const a = document.createElement('a');
+    a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
+    a.download = `hackit-save-${save.alias || 'anon'}.json`;
+    a.click();
+  });
+  if ($('btn-import') && $('import-file')) {
+    $('btn-import').addEventListener('click', () => $('import-file').click());
+    $('import-file').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const parsed = JSON.parse(r.result);
+          if (!parsed || typeof parsed.levels !== 'object') throw new Error('Invalid save');
+          save.alias = String(parsed.alias || save.alias || 'anon').replace(/[^\w\-.]/g, '') || 'anon';
+          save.levels = parsed.levels;
+          save.daily = parsed.daily && typeof parsed.daily === 'object' ? parsed.daily : {};
+          persist(); renderMap();
+        } catch { alert(tr('Ungültige Spielstand-Datei.', 'Invalid save file.')); }
+      };
+      r.readAsText(f);
+      e.target.value = '';
+    });
+  }
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (!$('modal').classList.contains('hidden')) $('modal').classList.add('hidden');
       if ($('cert-modal') && !$('cert-modal').classList.contains('hidden')) $('cert-modal').classList.add('hidden');
+      if ($('cheat-modal') && !$('cheat-modal').classList.contains('hidden')) $('cheat-modal').classList.add('hidden');
     }
   });
   $('btn-back').addEventListener('click', leaveGame);
@@ -606,7 +695,7 @@
     // LEVELS wurde bereits neu gebaut (levels-index.js) → Referenzen aktualisieren
     applyI18n();
     if (level) {
-      level = LEVELS.list.find(l => l.id === level.id);
+      level = level.isDaily && typeof dailyLevel === 'function' ? dailyLevel(level.dateKey) : LEVELS.list.find(l => l.id === level.id);
       if (ctx) { ctx.level = level; }
       renderSidebar();
       $('modal').classList.add('hidden');

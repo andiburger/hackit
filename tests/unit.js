@@ -250,11 +250,15 @@
   mk('div', 'p-alias'); mk('div', 'p-rank');
   mk('span', 'p-points'); mk('span', 'p-done'); mk('span', 'p-stars');
   mk('div', 'p-progress'); mk('main', 'map');
-  mk('button', 'btn-sound'); mk('button', 'btn-cert', { i18n: 'certBtn' });
+  mk('button', 'btn-sound'); mk('button', 'btn-export', { i18n: 'exportBtn' });
+  mk('button', 'btn-import', { i18n: 'importBtn' }); mk('input', 'import-file');
+  mk('button', 'btn-cert', { i18n: 'certBtn' });
   mk('button', 'btn-reset', { i18n: 'reset' });
 
   mk('section', 'screen-game', { screen: true });
   mk('button', 'btn-back', { i18n: 'back' });
+  mk('span', 'g-timer');
+  mk('button', 'btn-cheat', { i18n: 'cheatBtn' });
   mk('button', 'btn-restart', { i18n: 'restart' });
   mk('span', 'save-indicator', { i18n: 'saved' });
   mk('span', 'g-num'); mk('span', 'g-title'); mk('span', 'g-points');
@@ -264,6 +268,8 @@
   mk('span', 'term-title'); mk('div', 'terminal'); mk('div', 'term-out');
   mk('div', 'term-line'); mk('span', 'term-prompt'); mk('input', 'term-input');
 
+  mk('div', 'cheat-modal').classList.add('hidden');
+  mk('div', 'cheat-list'); mk('button', 'cheat-close', { i18n: 'close' });
   mk('p', 'cert-alias'); mk('p', 'cert-stats'); mk('p', 'cert-date');
   mk('div', 'cert-modal').classList.add('hidden');
   mk('button', 'cert-close', { i18n: 'close' });
@@ -729,7 +735,7 @@
       eq(byId['btn-back'].textContent, '← Missionen');
 
       // Mission 1 starten
-      const firstCard = byId['map'].children[0].querySelector('.cards').children[0];
+      const firstCard = byId['map'].children.find(c => c.classList.contains('chapter')).querySelector('.cards').children[0];
       firstCard.click();
       assert(byId['screen-game'].classList.contains('active'), 'game screen active');
       eq(byId['g-num'].textContent, '01');
@@ -751,10 +757,11 @@
       assert(byId['screen-map'].classList.contains('active'));
       const saved = JSON.parse(localStorage.getItem('hackit-save-v1'));
       assert(saved.sessions[1], 'session 1 persisted');
-      assert(byId['map'].children[0].classList.contains('resume-bar'), 'resume-bar shown');
+      const resumeBar = byId['map'].children.find(c => c.classList.contains('resume-bar'));
+      assert(resumeBar, 'resume-bar shown');
 
       // Session fortsetzen -> Terminal-Verlauf wiederhergestellt
-      byId['map'].children[0].querySelector('button').click();
+      resumeBar.querySelector('button').click();
       includes(byId['term-out'].innerHTML, 'willkommen.txt');
 
       // Falsche Flag -> Modal bleibt geschlossen
@@ -803,7 +810,7 @@
 
       // Zurück & Session mit geschriebener Datei /tmp/note.txt wiederherstellen
       byId['btn-back'].click();
-      byId['map'].children[0].querySelector('button').click();
+      byId['map'].children.find(c => c.classList.contains('resume-bar')).querySelector('button').click();
       byId['term-input'].value = 'cat /tmp/note.txt';
       byId['term-input'].dispatchEvent({ type: 'keydown', key: 'Enter' });
       await flush();
@@ -813,8 +820,21 @@
       byId['btn-restart'].click();
       eq(byId['g-num'].textContent, '02');
 
+      // Spickzettel & Timer prüfen, dann Reset
+      byId['btn-cheat'].click();
+      assert(!byId['cheat-modal'].classList.contains('hidden'), 'cheatsheet opens');
+      docListeners.keydown.forEach(fn => fn({ key: 'Escape' }));
+      assert(byId['cheat-modal'].classList.contains('hidden'), 'Escape closes cheatsheet');
+      includes(byId['g-timer'].textContent, '⏱');
+
+      // Daily Challenge generiert deterministische Flag
+      const d1 = dailyLevel('2026-11-18'), d2 = dailyLevel('2026-11-18');
+      eq(d1.flag, d2.flag);
+      assert(d1.flag.startsWith('HACKIT{d41ly_20261118_'));
+
       // Reset löscht Fortschritt
       byId['btn-back'].click();
+      byId['btn-export'].click();
       byId['btn-reset'].click();
       eq(byId['p-points'].textContent, '0');
       eq(byId['p-done'].textContent, '0/30');

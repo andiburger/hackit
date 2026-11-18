@@ -1104,3 +1104,64 @@ function advancedLevels() {
     },
   ];
 }
+
+/* Prozedural generierte Daily Challenge */
+function dailyLevel(dateKey = new Date().toISOString().slice(0, 10)) {
+  const { rng, kali, world, ev } = LevelKit;
+  const { F, linuxFS, host } = VFS;
+  const seed = parseInt(dateKey.replace(/-/g, ''), 10) || 20261118;
+  const r = rng(seed);
+  const shift = 3 + Math.floor(r() * 19);
+  const oct = 20 + Math.floor(r() * 70);
+  const hex = Math.floor(r() * 0xffffff).toString(16).padStart(6, '0');
+  const flag = `HACKIT{d41ly_${dateKey.replace(/-/g, '')}_${hex}}`;
+  const users = ['orbit', 'nova', 'pulse', 'zenith', 'nexus'];
+  const u = users[Math.floor(r() * users.length)];
+  const pw = `D4ily#${hex}`;
+  const b64 = Shell.b64encode(`${u}:${pw}`);
+  const enc = Shell.caesar(`TARGET=10.120.0.${oct} CRED_B64=${b64}`, shift);
+
+  return {
+    id: 'daily',
+    isDaily: true,
+    dateKey,
+    chapter: 0,
+    title: tr(`Daily Challenge (${dateKey})`, `Daily Challenge (${dateKey})`),
+    category: 'Daily',
+    difficulty: 5,
+    flag,
+    commands: [],
+    newCommands: [
+      { cmd: 'caesar + base64 + ssh', desc: tr('Tägliches Zufalls-Rätsel', 'Daily procedural puzzle') },
+    ],
+    story: tr(
+      `<p><b>Daily Challenge (${dateKey}):</b> Eine abgefangene Nachricht in <code>dispatch.txt</code> führt zu einem täglich wechselnden Zielrechner im Netz <code>10.120.0.0/24</code>.</p>`,
+      `<p><b>Daily Challenge (${dateKey}):</b> An intercepted message in <code>dispatch.txt</code> points to today's target host inside <code>10.120.0.0/24</code>.</p>`
+    ),
+    objectives: [
+      { text: tr('Lies dispatch.txt', 'Read dispatch.txt'), check: ev('read', e => e.path.endsWith('dispatch.txt')) },
+      { text: tr('Knacke die Verschlüsselung', 'Crack the encryption'), check: ev('decode', e => e.result.includes('CRED_B64')) },
+      { text: tr('Melde dich auf dem Tages-Ziel an', 'Log in to today\'s target'), check: ev('login', e => e.host === 'daily-srv') },
+      { text: tr('Lies /home/' + u + '/flag.txt', 'Read /home/' + u + '/flag.txt'), check: ev('read', e => e.host === 'daily-srv' && e.path.endsWith('flag.txt')) },
+    ],
+    hints: [
+      tr('Schau dir <code>dispatch.txt</code> an und nutze <code>caesar --brute dispatch.txt</code>.',
+        'Read <code>dispatch.txt</code> and run <code>caesar --brute dispatch.txt</code>.'),
+      tr('Dekodiere den Base64-Wert hinter <code>CRED_B64=</code> mit <code>echo ... | base64 -d</code>.',
+        'Decode the Base64 value after <code>CRED_B64=</code> via <code>echo ... | base64 -d</code>.'),
+      tr(`Verbinde dich mit <code>ssh ${u}@10.120.0.${oct}</code> (Passwort <code>${pw}</code>) und lies <code>flag.txt</code>.`,
+        `Connect via <code>ssh ${u}@10.120.0.${oct}</code> (password <code>${pw}</code>) and read <code>flag.txt</code>.`),
+    ],
+    learned: tr('Jeder Tag bringt ein neues Zielnetz und neue Schlüssel!', 'Every day brings a fresh target network and new keys!'),
+    setup() {
+      const k = kali('10.120.0.5', { 'dispatch.txt': F(enc) });
+      const srv = host({
+        name: 'daily-srv', ip: `10.120.0.${oct}`,
+        users: { [u]: { password: pw }, root: {} },
+        fs: linuxFS({ hostname: 'daily-srv', users: { [u]: {} }, homes: { [u]: { 'flag.txt': F(flag) } } }),
+        services: [{ port: 22, name: 'ssh', version: 'OpenSSH 9.6' }],
+      });
+      return world([k, srv], { ip: '10.120.0.5', user: 'hacker' });
+    },
+  };
+}
